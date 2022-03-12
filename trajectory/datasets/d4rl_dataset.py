@@ -85,6 +85,7 @@ class DiscretizedDataset(Dataset):
                     join_trajectory(trajectories[t]["states"], trajectories[t]["actions"], trajectories[t]["rewards"])
                 )
 
+            os.makedirs(os.path.join(cache_path), exist_ok=True)
             # save cached version
             with open(os.path.join(cache_path, self.cache_name), "wb") as f:
                 pickle.dump(self.joined_transitions, f)

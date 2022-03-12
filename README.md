@@ -15,7 +15,7 @@ python scripts/train.py --config="configs/medium/halfcheetah_medium" --device="c
 # Evaluation
 
 All available evaluation parameters can be seen in `configs/eval_vase.yaml`.
-Here parameters are set to match configs from original implementation by @jannerm. 
+Here parameters are set to match configs from original implementation by [@jannerm](https://github.com/jannerm). 
 
 ```bash
 # you can override every config value from command line
@@ -23,7 +23,7 @@ Here parameters are set to match configs from original implementation by @janner
 # halfcheetah-medium-v2
 python scripts/eval.py \ 
     --config="configs/eval_base.yaml" --device="cuda" --seed="42" \
-    checkpoints_path="pretrained/medium/halfcheetah" \
+    checkpoints_path="pretrained/halfcheetah" \
     beam_context=5 \ 
     beam_steps=5 \
     beam_width=32
@@ -31,7 +31,7 @@ python scripts/eval.py \
 # hopper-medium-v2
 python scripts/eval.py \ 
     --config="configs/eval_base.yaml" --device="cuda" --seed="42" \
-    checkpoints_path="pretrained/medium/hopper" \
+    checkpoints_path="pretrained/hopper" \
     beam_context=5 \ 
     beam_steps=15 \
     beam_width=128
@@ -39,7 +39,7 @@ python scripts/eval.py \
 # walker2d-medium-v2
 python scripts/eval.py \ 
     --config="configs/eval_base.yaml" --device="cuda" --seed="42" \
-    checkpoints_path="pretrained/medium/walker2d" \
+    checkpoints_path="pretrained/walker2d" \
     beam_context=5 \ 
     beam_steps=15 \
     beam_width=128
