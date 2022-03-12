@@ -32,7 +32,7 @@ Vectorized environments allow batching beam search planning and select actions i
 if you need to evaluate agent on number of episodes (or seeds) during training.  
 
 
-# Training
+## Training
 
 I trained it on D4RL medium datasets to validate that everything is OK. Scores seem to be very close to the original.
 Pretrained models are [available](pretrained).
@@ -44,7 +44,7 @@ Also, all datasets for [D4RL](https://sites.google.com/view/d4rl/home) gym tasks
 python scripts/train.py --config="configs/medium/halfcheetah_medium" --device="cuda" --seed="42"
 ```
 
-# Evaluation
+## Evaluation
 
 Available evaluation parameters can be seen in validation [config](configs/eval_vase.yaml).
 Here parameters are set to match evaluation configs from original implementation by [@jannerm](https://github.com/jannerm). 
@@ -77,7 +77,7 @@ python scripts/eval.py \
     beam_width=128
 ```
 
-# References
+## References
 ```
 @inproceedings{janner2021sequence,
   title = {Offline Reinforcement Learning as One Big Sequence Modeling Problem},

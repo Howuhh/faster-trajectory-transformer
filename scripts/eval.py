@@ -25,8 +25,6 @@ def create_argparser():
 def run_experiment(config, seed, device):
     set_seed(seed=seed)
 
-    print(config)
-
     run_config = OmegaConf.load(os.path.join(config.checkpoints_path, "config.yaml"))
     discretizer = torch.load(os.path.join(config.checkpoints_path, "discretizer.pt"), map_location=device)
 
