@@ -1,0 +1,16 @@
+checkpoints_path: "pretrained/medium/halfcheetah"
+model_name: "model_last.pt"
+
+num_episodes: 25
+beam_context: 5
+beam_steps: 5
+beam_width: 32
+plan_every: 1
+sample_expand: 2
+k_act: null
+k_obs: 1
+k_reward: 1
+temperature: 1.0
+discount: 0.99
+vectorized: true
+#render_path: "rollouts"  # WARN: only for not vectorized
