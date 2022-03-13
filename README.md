@@ -24,7 +24,7 @@ unnecessary computations to recompute attention maps for full past context. Howe
 as it was already computed when the previous token was predicted. **All we need is to cache it**!
 
 Actually, attention caching is a common thing in NLP field, but a lot of RL practitioners may
-not be familiar with NLP, so the code can be also a good example for learning.
+not be familiar with NLP, so the code also can be educational.
 
 ### Vectorized rollouts
 
@@ -38,7 +38,7 @@ I trained it on D4RL medium datasets to validate that everything is OK. Scores s
 Pretrained models are [available](pretrained).
 
 All training parameters can be seen in training [configs](configs/medium). 
-Also, all datasets for [D4RL](https://sites.google.com/view/d4rl/home) gym tasks are supported.
+Also, all datasets for [D4RL](https://sites.google.com/view/d4rl/home) Gym tasks are supported.
 
 ```bash
 python scripts/train.py --config="configs/medium/halfcheetah_medium" --device="cuda" --seed="42"
