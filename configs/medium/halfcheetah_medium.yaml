@@ -1,9 +1,9 @@
 wandb:
-  project: null  # write yours
+  project: "offlineRL" # write yours
   name: "halfcheetah_medium"
   group: "gpt_cache"
-  entity: null  # write yours
-  mode: "disabled"  # set to online, if needed
+  entity: "matthew-cy" # write yours
+  mode: "online"  # set to online, if needed
 
 dataset:
   env_name: "halfcheetah-medium-v2"
