@@ -15,7 +15,8 @@ class TransformerBlock(nn.Module):
         self.norm2 = nn.LayerNorm(embedding_dim)
         self.drop = nn.Dropout(residual_dropout)
 
-        self.attention = nn.MultiheadAttention(embedding_dim, num_heads, attention_dropout, batch_first=True)
+        # self.attention = nn.MultiheadAttention(embedding_dim, num_heads, attention_dropout, batch_first=True)
+        self.attention = nn.MultiheadAttention(embedding_dim, num_heads, attention_dropout)
         self.mlp = nn.Sequential(
             nn.Linear(embedding_dim, 4 * embedding_dim),
             nn.GELU(),
@@ -43,7 +44,11 @@ class TransformerBlock(nn.Module):
             q, k, v = x, torch.cat([state, x], dim=1), torch.cat([state, x], dim=1)
 
         new_state = k
-        x = x + self.drop(self.attention(q, k, v, attn_mask=attn_mask, key_padding_mask=attn_pad_mask, need_weights=False)[0])
+        q, k, v = [x.transpose(1, 0) for x in (q, k, v)]
+        latent, _ = self.attention(q, k, v, attn_mask=attn_mask, key_padding_mask=attn_pad_mask, need_weights=False)
+        latent = latent.transpose(1, 0)
+        x = x + self.drop(latent)
+#        x = x + self.drop(self.attention(q, k, v, attn_mask=attn_mask, key_padding_mask=attn_pad_mask, need_weights=False)[0])
         x = x + self.mlp(self.norm2(x))
 
         return x, new_state
