@@ -118,6 +118,23 @@ class GPTTrainer:
 
         return loss
 
+    def eval_offline(self, model, dataloader, seed=None, log_every=100):
+        model.eval()
+        set_seed(seed=seed)
+
+        eval_losses = []
+        for i, batch in enumerate(tqdm(dataloader, desc="Epoch", leave=False)):
+            batch = [b.to(self.device) for b in batch]
+            loss = self.__get_loss(model, batch)
+            eval_losses.append(loss.item())
+
+            if i % log_every == 0:
+                wandb.log({
+                    "eval/loss_batch": loss.item(),
+                })
+
+        return np.mean(eval_losses)
+
     def eval(self, env_name, model, discretizer, seed=None):
         model.eval()
         set_seed(seed=seed)

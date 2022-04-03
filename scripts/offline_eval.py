@@ -16,57 +16,31 @@ def create_argparser():
     parser.add_argument("--config", default="configs/halfcheetah_medium.yaml")
     parser.add_argument("--seed", default=42, type=int)
     parser.add_argument("--device", default="cpu", type=str)
-    parser.add_argument("--data_type", default="d4rl", type=str)
 
     return parser
 
 
-def run_experiment(config, seed, data_type, device):
+def run_experiment(config, seed, device):
     config.run_seed = seed
     os.makedirs(config.trainer.checkpoints_path, exist_ok=True)
     OmegaConf.save(OmegaConf.to_container(config, resolve=True), os.path.join(config.trainer.checkpoints_path, "config.yaml"))
 
     set_seed(seed=seed)
 
-    trainer_conf = config.trainer
     data_conf = config.dataset
-
-    if data_type == "offline":
-        dataset = DiscretizedOfflineDataset(
-            env_name=data_conf.env_name,
-            data_dir=data_conf.data_dir,
-            n_trj=data_conf.n_trj,
-            train_tasks=range(data_conf.train_tasks),
-            eval_tasks=range(data_conf.train_tasks, data_conf.train_tasks + data_conf.eval_tasks),
-            seq_len=data_conf.seq_len,
-            cache_path=data_conf.cache_path,
-            num_bins=data_conf.num_bins,
-            discount=data_conf.discount,
-            strategy=data_conf.strategy
-        )
-    else:
-        dataset = DiscretizedDataset(
-            env_name=data_conf.env_name,
-            seq_len=data_conf.seq_len,
-            cache_path=data_conf.cache_path,
-            num_bins=data_conf.num_bins,
-            discount=data_conf.discount,
-            strategy=data_conf.strategy
-        )
-    dataloader = DataLoader(dataset, batch_size=data_conf.batch_size, shuffle=True, num_workers=8, pin_memory=True)
+    trainer_conf = config.trainer
 
     model = GPT(**config.model)
     model.to(device)
 
-    num_epochs = int(1e6 / len(dataset) * trainer_conf.num_epochs_ref)
-
-    warmup_tokens = len(dataset) * data_conf.seq_len * config.model.transition_dim
-    final_tokens = warmup_tokens * num_epochs
+    warmup_tokens = 0
+    final_tokens = 0
 
     wandb.init(
         **config.wandb,
         config=dict(OmegaConf.to_container(config, resolve=True))
     )
+
     trainer = GPTTrainer(
         final_tokens=final_tokens,
         warmup_tokens=warmup_tokens,
@@ -94,11 +68,31 @@ def run_experiment(config, seed, data_type, device):
         save_every=1,
         device=device
     )
-    trainer.train(
-        model=model,
-        dataloader=dataloader,
-        num_epochs=num_epochs
-    )
+
+
+    for task_idx in range(data_conf.train_tasks, data_conf.train_tasks + data_conf.eval_tasks):
+        dataset = DiscretizedOfflineDataset(
+            env_name=data_conf.env_name,
+            data_dir=data_conf.data_dir,
+            n_trj=data_conf.n_trj,
+            #tasks=range(data_conf.train_tasks, data_conf.train_tasks + data_conf.eval_tasks),
+            tasks=[task_idx],
+            seq_len=data_conf.seq_len,
+            cache_path=data_conf.cache_path,
+            num_bins=data_conf.num_bins,
+            discount=data_conf.discount,
+            strategy=data_conf.strategy
+        )
+        dataloader = DataLoader(dataset, batch_size=data_conf.batch_size, shuffle=True, num_workers=8, pin_memory=True)
+
+        eval_loss = trainer.eval_offline(
+            model=model,
+            dataloader=dataloader,
+            seed=trainer_conf.eval_seed,
+
+        )
+        print(f"mean loss on task {task_idx} in {data_conf.data_dir}")
+        print(f"{eval_loss}")
 
 
 def main():
@@ -110,7 +104,6 @@ def main():
     run_experiment(
         config=config,
         seed=args.seed,
-        data_type=args.data_type,
         device=args.device
     )
 
