@@ -76,7 +76,7 @@ class DiscretizedOfflineDataset(Dataset):
             dataset["dones"]
         )
         self.cache_path = cache_path
-        self.cache_name = f"{env_name}_{num_bins}_{seq_len}_{strategy}_{discount}_{','.join(tasks)}"
+        self.cache_name = f"{env_name}_{num_bins}_{seq_len}_{strategy}_{discount}_{','.join([str(idx) for idx in tasks])}"
 
         if cache_path is None or not os.path.exists(os.path.join(cache_path, self.cache_name)):
             self.joined_transitions = []
