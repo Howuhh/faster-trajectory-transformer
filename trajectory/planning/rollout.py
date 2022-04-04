@@ -1,8 +1,6 @@
 import torch
 import numpy as np
 
-from tqdm.auto import trange
-
 from trajectory.planning.sample import sample
 from trajectory.utils.common import round_to_multiple
 
@@ -16,7 +14,7 @@ def convert_to_seq(discretizer, cp_obs, cp_act, cp_reward, curr_obs, curr_action
     value_placeholder = np.ones((batch_size, 1)) * value_placeholder
 
     context = torch.zeros(batch_size, transition_dim * context_size + obs_dim + act_dim, dtype=torch.long).to(device)
-    for t in trange(context_size, desc="Converting steps", leave=True):
+    for t in range(context_size):
         obs = cp_obs[:, t * obs_dim:(t + 1) * obs_dim]
         act = cp_act[:, t * act_dim:(t + 1) * act_dim]
         reward = cp_reward[:, t:(t + 1)]
@@ -80,4 +78,4 @@ def offline_rollout(model, discretizer, context, context_size=None,
         subslice=(transition_dim - 2, transition_dim)
     )
 
-    return next_obs, reward[:, 0]
+    return next_obs, reward[:, 0][..., np.newaxis]
