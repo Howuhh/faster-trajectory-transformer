@@ -22,15 +22,12 @@ def load_paths(data_dir, n_trj, tasks):
 
 
 def offline_dataset(data_dir, n_trj, tasks):
-    paths, _  = load_paths(data_dir, n_trj, tasks)
+    paths, _ = load_paths(data_dir, n_trj, tasks)
     obs_, action_, reward_ = [], [], []
     done_, real_done_ = [], []
 
     for path in tqdm(paths):
         dataset = np.load(path, allow_pickle=True)
-        # N = dataset["rewards"].shape[0]
-        _path = os.path.split(path)
-        path_info = f"{_path[0].split('/')[-1]}/{_path[1]}"
         for idx, (obs, action, reward, next_obs) in enumerate(dataset):
             real_done = 1 if idx == len(dataset) - 1 else 0
             done = real_done

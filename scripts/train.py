@@ -1,3 +1,4 @@
+from cgitb import enable
 import os
 import wandb
 import argparse
@@ -41,7 +42,8 @@ def run_experiment(config, seed, data_type, device):
             cache_path=data_conf.cache_path,
             num_bins=data_conf.num_bins,
             discount=data_conf.discount,
-            strategy=data_conf.strategy
+            strategy=data_conf.strategy,
+            enable_discretize=data_conf.enable_discretize
         )
     else:
         dataset = DiscretizedDataset(
