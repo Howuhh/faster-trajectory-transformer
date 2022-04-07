@@ -154,5 +154,7 @@ Thumbs.db
 # profiling data
 .prof
 
+# un file
+*.un~
 
 # End of https://www.toptal.com/developers/gitignore/api/pythono
