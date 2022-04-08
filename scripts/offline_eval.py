@@ -70,7 +70,7 @@ def run_experiment(config, seed, device):
     )
 
 
-    for task_idx in range(data_conf.train_tasks, data_conf.train_tasks + data_conf.eval_tasks):
+    for task_idx in range(data_conf.n_trj, data_conf.n_trj - data_conf.eval_tasks, -1):
         dataset = DiscretizedOfflineDataset(
             env_name=data_conf.env_name,
             data_dir=data_conf.data_dir,

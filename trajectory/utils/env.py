@@ -1,4 +1,5 @@
 import os
+from random import random
 import gym
 import d4rl
 import torch
@@ -7,7 +8,14 @@ import numpy as np
 
 from tqdm.auto import trange
 from trajectory.planning.beam import beam_plan, batch_beam_plan
+from .envs.walker_rand_params_wrapper import WalkerRandParamsWrappedEnv
 
+
+def create_meta_env(data_dir, n_tasks):
+    env = WalkerRandParamsWrappedEnv(data_dir=data_dir, n_tasks=n_tasks, randomize_tasks=False)
+    env.name = "walker-rand-params"
+    env.max_episode_steps = 1000
+    return env
 
 def create_env(name):
     wrapped_env = gym.make(name)

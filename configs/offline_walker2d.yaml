@@ -8,17 +8,16 @@ wandb:
 dataset:
     #env_name: "Walker2d-v2"
   env_name: "walker2d-medium-v2"
-  data_dir: "/home/changyeon/CaDM_MerPO/data/walker-rand-param"
+  data_dir: "/input/nfs-3090-s00/changyeon/source/walker-rand-params"
   n_trj: 50
   train_tasks: 20
   eval_tasks: 5
   seq_len: 10
-  cache_path: "data"
+  cache_path: "/input/nfs-3090-s00/changyeon/data"
   num_bins: ${model.vocab_size}
   discount: 0.99
   strategy: "uniform"
   batch_size: 256
-  enable_discrete: True
 
 model:
   vocab_size: 100
@@ -53,4 +52,4 @@ trainer:
   eval_k_obs: 1
   eval_k_reward: 1
   eval_k_act: null
-  checkpoints_path: "checkpoints/walker-rand-params/"
+  checkpoints_path: "/input/nfs-3090-s00/changyeon/checkpoints/walker-rand-params/"

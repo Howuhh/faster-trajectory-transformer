@@ -62,7 +62,7 @@ def segment(states, actions, rewards, terminals):
 
 # adapted from https://github.com/jannerm/trajectory-transformer/blob/master/trajectory/datasets/sequence.py
 class DiscretizedOfflineDataset(Dataset):
-    def __init__(self, env_name, data_dir, n_trj, tasks, num_bins=100, seq_len=10, discount=0.99, strategy="uniform", cache_path=None, enable_discretize=True):
+    def __init__(self, env_name, data_dir, n_trj, tasks, num_bins=100, seq_len=10, discount=0.99, strategy="uniform", cache_path=None):
         self.seq_len = seq_len
         self.discount = discount
         self.num_bins = num_bins
@@ -77,7 +77,6 @@ class DiscretizedOfflineDataset(Dataset):
         )
         self.cache_path = cache_path
         self.cache_name = f"{env_name}_{num_bins}_{seq_len}_{strategy}_{discount}_{','.join([str(idx) for idx in tasks])}"
-        self.enable_discretize = enable_discretize
 
         if cache_path is None or not os.path.exists(os.path.join(cache_path, self.cache_name)):
             self.joined_transitions = []
@@ -127,10 +126,7 @@ class DiscretizedOfflineDataset(Dataset):
             loss_pad_mask[joined.shape[0]:] = 0
             joined = pad_along_axis(joined, pad_to=self.seq_len, axis=0)
 
-        if self.enable_discretize:
-            joined_discrete = self.discretizer.encode(joined).reshape(-1).astype(np.long)
-            loss_pad_mask = loss_pad_mask.reshape(-1)
-        else:
-            joined_discrete = joined
+        joined_discrete = self.discretizer.encode(joined).reshape(-1).astype(np.long)
+        loss_pad_mask = loss_pad_mask.reshape(-1)
 
         return joined_discrete[:-1], joined_discrete[1:], loss_pad_mask[:-1]
