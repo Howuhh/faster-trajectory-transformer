@@ -90,6 +90,9 @@ def run_experiment(config, seed, data_type, device):
         eval_k_obs=trainer_conf.eval_k_obs,  # as in original implementation
         eval_k_reward=trainer_conf.eval_k_reward,
         eval_k_act=trainer_conf.eval_k_act,
+        eval_data_dir=data_conf.data_dir,
+        eval_tasks=data_conf.eval_tasks,
+        eval_n_trj=data_conf.n_trj,
         checkpoints_path=trainer_conf.checkpoints_path,
         save_every=1,
         device=device
