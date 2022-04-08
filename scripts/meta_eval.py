@@ -37,7 +37,6 @@ def run_experiment(config, seed, device):
     if config.vectorized:
         env = DummyVecEnv([lambda: create_meta_env(data_dir=run_config.dataset.data_dir, n_tasks=run_config.dataset.n_trj) for _ in range(run_config.dataset.eval_tasks * config.num_episodes)])
         env_indices = np.repeat(eval_tasks, config.num_episodes)
-        print(f"env_indices: {env_indices}")
         for env_idx, task_idx in enumerate(env_indices):
             env.envs[env_idx].reset_task(task_idx)
 
@@ -58,9 +57,8 @@ def run_experiment(config, seed, device):
             max_steps=env.envs[0].max_episode_steps,
             device=device
         )
-        scores = [env.envs[0].get_normalized_score(r) for r in rewards]
     else:
-        rewards, scores = [], []
+        rewards = []
 
         env = create_meta_env(data_dir=run_config.dataset.data_dir, n_tasks=run_config.dataset.n_trj)
         for i in tqdm(eval_tasks, desc="Evaluation (not vectorized)"):
@@ -85,14 +83,17 @@ def run_experiment(config, seed, device):
                     device=device
                 )
                 rewards.append(reward)
-                scores.append(env.get_normalized_score(reward))
 
+    # make sync with MerPO
+    # In MerPO, there's more complicated logics (guarantee num_steps_per_eval (600)), but I removed it.
+    # It's more robust setup for getting rewards.
+    final_returns = [elem for idx, elem in enumerate(rewards) if idx % config.num_episodes == (config.num_episodes - 1)]
+    final_returns_mean, final_returns_std = np.mean(final_returns), np.std(final_returns)
     reward_mean, reward_std = np.mean(rewards), np.std(rewards)
-    score_mean, score_std = np.mean(scores), np.std(scores)
 
     print(f"Evalution on {run_config.dataset.env_name}")
-    print(f"Mean reward: {reward_mean} ± {reward_std}")
-    print(f"Mean score: {score_mean} ± {score_std}")
+    print(f"AvgReturn_all_test_tasks: {final_returns_mean} ± {final_returns_std}")
+    print(f"AvgReturn_online_test_tasks: {reward_mean} ± {reward_std}")
 
 
 def main():
