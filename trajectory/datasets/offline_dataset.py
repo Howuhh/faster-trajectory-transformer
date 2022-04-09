@@ -66,7 +66,8 @@ class DiscretizedOfflineDataset(Dataset):
         self.seq_len = seq_len
         self.discount = discount
         self.num_bins = num_bins
-        self.env = create_env(env_name)
+        # self.env = create_env(env_name)
+        self.env_name = env_name
 
         dataset = offline_dataset(data_dir, n_trj, tasks)
         trajectories, traj_lengths = segment(
@@ -108,7 +109,8 @@ class DiscretizedOfflineDataset(Dataset):
         self.indices = np.array(indices)
 
     def get_env_name(self):
-        return self.env.name
+        return self.env_name 
+        # return self.env.name
 
     def get_discretizer(self):
         return self.discretizer
