@@ -13,5 +13,9 @@ k_obs: 1
 k_reward: 1
 temperature: 1.0
 discount: 0.99
-vectorized: true
+vectorized: false
+
+finetune: true
+finetune_ratio: 0.1
+finetune_epochs: 10
 #render_path: "rollouts"  # WARN: only for not vectorized

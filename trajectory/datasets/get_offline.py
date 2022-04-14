@@ -21,8 +21,11 @@ def load_paths(data_dir, n_trj, tasks):
     return paths, task_idxs
 
 
-def offline_dataset(data_dir, n_trj, tasks):
+def offline_dataset(data_dir, n_trj, tasks, ratio=1.0):
     paths, _ = load_paths(data_dir, n_trj, tasks)
+    if ratio < 1.0:
+        indexes = np.random.choice(range(len(paths)), int(len(paths) * ratio), replace=False).tolist()
+        paths = [paths[index] for index in indexes]
     obs_, action_, reward_ = [], [], []
     done_, real_done_ = [], []
 

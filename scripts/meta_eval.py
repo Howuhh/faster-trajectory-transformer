@@ -5,10 +5,14 @@ import numpy as np
 
 from tqdm.auto import tqdm, trange
 from omegaconf import OmegaConf
+from torch.utils.data import DataLoader, Subset
 
 from stable_baselines3.common.vec_env import DummyVecEnv
+import wandb
+from trajectory.datasets.offline_dataset import DiscretizedOfflineDataset
 
 from trajectory.models.gpt import GPT
+from trajectory.models.gpt.gpt_trainer import GPTTrainer
 from trajectory.utils.common import set_seed
 from trajectory.utils.env import create_env, create_meta_env, rollout, vec_rollout
 
@@ -22,6 +26,85 @@ def create_argparser():
     return parser
 
 
+def finetune_model(model, task_idx, config, device, seed=42, finetune_ratio=0.1, num_epochs=10):
+    finetune_path = os.path.join(config.trainer.checkpoints_path, "finetune", str(task_idx))
+    if os.path.exists(finetune_path):
+        model.load_state_dict(torch.load(os.path.join(finetune_path, "model_last.pt"), map_location=device))
+    else:
+        # finetune the trained model for target dataset.
+        set_seed(seed=seed)
+
+        trainer_conf = config.trainer
+        data_conf = config.dataset
+
+        dataset = DiscretizedOfflineDataset(
+            env_name=data_conf.env_name,
+            data_dir=data_conf.data_dir,
+            n_trj=data_conf.n_trj,
+            tasks=[task_idx],
+            ratio=finetune_ratio,
+            seq_len=data_conf.seq_len,
+            cache_path=data_conf.cache_path,
+            num_bins=data_conf.num_bins,
+            discount=data_conf.discount,
+            strategy=data_conf.strategy,
+        )
+        # data_length = int(len(dataset) * finetune_ratio)
+        # train_idx, val_idx = torch.utils.data.train_test_split(data_length, test_size=finetune_ratio)
+        # _, finetune_dataset = torch.utils.data.random_split(dataset, [len(dataset) - data_length, data_length])
+        dataloader = DataLoader(dataset, batch_size=data_conf.batch_size, shuffle=True, num_workers=8, pin_memory=True)
+
+        config.wandb.mode = "offline"
+        wandb.init(
+            **config.wandb,
+            config=dict(OmegaConf.to_container(config, resolve=True))
+        )
+        model = GPT(**config.model)
+        model.to(device)
+
+        warmup_tokens = len(dataset) * data_conf.seq_len * config.model.transition_dim
+        final_tokens = warmup_tokens * num_epochs
+
+        trainer = GPTTrainer(
+            final_tokens=final_tokens,
+            warmup_tokens=warmup_tokens,
+            action_weight=trainer_conf.action_weight,
+            value_weight=trainer_conf.value_weight,
+            reward_weight=trainer_conf.reward_weight,
+            learning_rate=trainer_conf.lr,
+            betas=trainer_conf.betas,
+            weight_decay=trainer_conf.weight_decay,
+            clip_grad=trainer_conf.clip_grad,
+            eval_seed=trainer_conf.eval_seed,
+            eval_every=1e10,
+            eval_episodes=trainer_conf.eval_episodes,
+            eval_temperature=trainer_conf.eval_temperature,
+            eval_discount=trainer_conf.eval_discount,
+            eval_plan_every=trainer_conf.eval_plan_every,
+            eval_beam_width=trainer_conf.eval_beam_width,
+            eval_beam_steps=trainer_conf.eval_beam_steps,
+            eval_beam_context=trainer_conf.eval_beam_context,
+            eval_sample_expand=trainer_conf.eval_sample_expand,
+            eval_k_obs=trainer_conf.eval_k_obs,  # as in original implementation
+            eval_k_reward=trainer_conf.eval_k_reward,
+            eval_k_act=trainer_conf.eval_k_act,
+            eval_data_dir=data_conf.data_dir,
+            eval_tasks=data_conf.eval_tasks,
+            eval_n_trj=data_conf.n_trj,
+            eval_max_steps=trainer_conf.eval_max_steps,
+            checkpoints_path=finetune_path,
+            save_every=num_epochs,
+            device=device
+        )
+        trainer.train(
+            model=model,
+            dataloader=dataloader,
+            num_epochs=num_epochs,
+            log_every = 1e10
+        )
+        # finetune with data
+
+
 def run_experiment(config, seed, device):
     set_seed(seed=seed)
 
@@ -31,7 +114,7 @@ def run_experiment(config, seed, device):
     model = GPT(**run_config.model)
     model.eval()
     model.to(device)
-    model.load_state_dict(torch.load(os.path.join(config.checkpoints_path, config.model_name), map_location=device))
+    # model.load_state_dict(torch.load(os.path.join(config.checkpoints_path, config.model_name), map_location=device))
     eval_tasks = range(run_config.dataset.n_trj - run_config.dataset.eval_tasks, run_config.dataset.n_trj)
 
     if config.vectorized:
@@ -62,7 +145,20 @@ def run_experiment(config, seed, device):
 
         env = create_meta_env(data_dir=run_config.dataset.data_dir, n_tasks=run_config.dataset.n_trj)
         for i in tqdm(eval_tasks, desc="Evaluation (not vectorized)"):
+            model.load_state_dict(torch.load(os.path.join(config.checkpoints_path, config.model_name), map_location=device))
             print(f"task idx: {i}")
+            if config.finetune:
+                print(f"finetune on task idx {i}")
+                finetune_model(
+                    model,
+                    task_idx=i,
+                    config=run_config,
+                    device=device,
+                    seed=seed,
+                    finetune_ratio=config.finetune_ratio,
+                    num_epochs=config.finetune_epochs
+                )
+            model.eval()
             task_rewards = []
             env.reset_task(i, verbose=True)
             for _ in trange(config.num_episodes, desc=f"Evaluation on task {i}"):

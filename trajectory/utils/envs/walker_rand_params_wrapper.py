@@ -35,7 +35,7 @@ def read_log_params(log_file):
 
 class WalkerRandParamsWrappedEnv(Walker2DRandParamsEnv):
     def __init__(self, n_tasks=2, randomize_tasks=True, max_episode_steps=200, data_dir=None):
-        super(WalkerRandParamsWrappedEnv, self).__init__()
+        super(WalkerRandParamsWrappedEnv, self).__init__(max_episode_steps=max_episode_steps)
         self.randomize_tasks = randomize_tasks
         self.data_dir = data_dir
         self.tasks = self.sample_tasks(n_tasks)
@@ -108,9 +108,9 @@ class WalkerRandParamsWrappedEnv(Walker2DRandParamsEnv):
 
     def step(self, action):
         obs, reward, done, info = super().step(action)
-        # self.env_step += 1
-        # if self.env_step >= self._max_episode_steps:
-        #     done = True
+        self.env_step += 1
+        if self.env_step >= self._max_episode_steps:
+            done = True
         return obs, reward, done, info
 
     def reset_task(self, idx, verbose=False):

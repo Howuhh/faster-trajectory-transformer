@@ -62,14 +62,14 @@ def segment(states, actions, rewards, terminals):
 
 # adapted from https://github.com/jannerm/trajectory-transformer/blob/master/trajectory/datasets/sequence.py
 class DiscretizedOfflineDataset(Dataset):
-    def __init__(self, env_name, data_dir, n_trj, tasks, num_bins=100, seq_len=10, discount=0.99, strategy="uniform", cache_path=None):
+    def __init__(self, env_name, data_dir, n_trj, tasks, num_bins=100, seq_len=10, discount=0.99, strategy="uniform", cache_path=None, ratio=1):
         self.seq_len = seq_len
         self.discount = discount
         self.num_bins = num_bins
         # self.env = create_env(env_name)
         self.env_name = env_name
 
-        dataset = offline_dataset(data_dir, n_trj, tasks)
+        dataset = offline_dataset(data_dir, n_trj, tasks, ratio=ratio)
         trajectories, traj_lengths = segment(
             dataset["states"],
             dataset["actions"],
@@ -78,6 +78,9 @@ class DiscretizedOfflineDataset(Dataset):
         )
         self.cache_path = cache_path
         self.cache_name = f"{env_name}_{num_bins}_{seq_len}_{strategy}_{discount}_{','.join([str(idx) for idx in tasks])}"
+
+        if ratio < 1.0:
+            self.cache_name += f"_{ratio}"
 
         if cache_path is None or not os.path.exists(os.path.join(cache_path, self.cache_name)):
             self.joined_transitions = []

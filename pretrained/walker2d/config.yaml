@@ -6,6 +6,10 @@ wandb:
   mode: offline
 dataset:
   env_name: walker2d-medium-v2
+  data_dir: /home/changyeon/CaDM_MerPO/data/walker-rand-params
+  n_trj: 50
+  train_tasks: 20
+  eval_tasks: 5
   seq_len: 10
   cache_path: data
   num_bins: 100
@@ -42,6 +46,7 @@ trainer:
   eval_beam_width: 128
   eval_beam_steps: 15
   eval_beam_context: 5
+  eval_max_steps: 600
   eval_sample_expand: 2
   eval_k_obs: 1
   eval_k_reward: 1
