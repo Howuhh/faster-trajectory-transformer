@@ -93,6 +93,7 @@ def run_experiment(config, seed, data_type, device):
         eval_data_dir=data_conf.data_dir,
         eval_tasks=data_conf.eval_tasks,
         eval_n_trj=data_conf.n_trj,
+        eval_max_steps=trainer_conf.eval_max_steps,
         checkpoints_path=trainer_conf.checkpoints_path,
         save_every=1,
         device=device

@@ -7,7 +7,7 @@ import torch.nn.functional as F
 from tqdm.auto import tqdm, trange
 from stable_baselines3.common.vec_env import DummyVecEnv
 
-from trajectory.utils.env import vec_rollout, create_env, create_meta_env
+from trajectory.utils.env import rollout, vec_rollout, create_env, create_meta_env
 from trajectory.models.gpt.ein_linear import EinLinear
 from trajectory.utils.scheduler import GPTScheduler
 from trajectory.utils.common import weight_decay_groups, set_seed
@@ -38,6 +38,7 @@ class GPTTrainer:
             eval_data_dir=None,
             eval_tasks=5,
             eval_n_trj=50,
+            eval_max_steps=1000,
             action_weight=1,
             value_weight=1,
             reward_weight=1,
@@ -79,6 +80,7 @@ class GPTTrainer:
         self.eval_data_dir = eval_data_dir
         self.eval_tasks = eval_tasks
         self.eval_n_trj = eval_n_trj
+        self.eval_max_steps = eval_max_steps
 
         self.device = device
 
@@ -173,34 +175,66 @@ class GPTTrainer:
     def meta_eval(self, env_name, model, discretizer, seed=None):
         model.eval()
         set_seed(seed=seed)
+        rewards = []
+        scores = []
 
-        vec_env = DummyVecEnv([lambda: create_meta_env(data_dir=self.eval_data_dir, n_tasks=self.eval_n_trj) for _ in range(self.eval_tasks * self.eval_episodes)])
+        # use unimodal, instead of vec for fair comparsion.
+        env = create_meta_env(data_dir=self.eval_data_dir, n_tasks=self.eval_n_trj)
         eval_tasks = range(self.eval_n_trj - self.eval_tasks, self.eval_n_trj)
-        env_indices = np.repeat(eval_tasks, self.eval_episodes)
-        for env_idx, task_idx in enumerate(env_indices):
-            vec_env.envs[env_idx].reset_task(task_idx)
+        for i in tqdm(eval_tasks):
+            env.reset_task(i)
+            for j in trange(self.eval_episodes, desc=f"Evaluation on task {i}"):
+                reward = rollout(
+                    env=env,
+                    model=model,
+                    discretizer=discretizer,
+                    beam_context_size=self.eval_beam_context,
+                    beam_width=self.eval_beam_width,
+                    beam_steps=self.eval_beam_steps,
+                    plan_every=self.eval_plan_every,
+                    sample_expand=self.eval_sample_expand,
+                    k_act=self.eval_k_act,
+                    k_obs=self.eval_k_obs,
+                    k_reward=self.eval_k_reward,
+                    temperature=self.eval_temperature,
+                    discount=self.eval_discount,
+                    max_steps=self.eval_max_steps,
+                    device=self.device
+                )
+                rewards.append(reward)
 
-        rewards = vec_rollout(
-            vec_env=vec_env,
-            model=model,
-            discretizer=discretizer,
-            beam_context_size=self.eval_beam_context,
-            beam_width=self.eval_beam_width,
-            beam_steps=self.eval_beam_steps,
-            plan_every=self.eval_plan_every,
-            sample_expand=self.eval_sample_expand,
-            k_act=self.eval_k_act,
-            k_obs=self.eval_k_obs,
-            k_reward=self.eval_k_reward,
-            temperature=self.eval_temperature,
-            discount=self.eval_discount,
-            max_steps=vec_env.envs[0].max_episode_steps,
-            device=self.device
-        )
-        scores = [vec_env.envs[0].get_normalized_score(r) for r in rewards]
-
+        scores.append(env.get_normalized_score(reward))
+        final_returns = [elem for idx, elem in enumerate(rewards) if idx % self.eval_episodes == (self.eval_episodes - 1)]
+        final_returns_mean, final_returns_std = np.mean(final_returns), np.std(final_returns)
+        reward_mean, reward_std = np.mean(rewards), np.std(rewards)
         model.train()
-        return np.mean(rewards), np.std(rewards), np.mean(scores), np.std(scores)
+
+        # vec_env = DummyVecEnv([lambda: create_meta_env(data_dir=self.eval_data_dir, n_tasks=self.eval_n_trj) for _ in range(self.eval_tasks * self.eval_episodes)])
+        # eval_tasks = range(self.eval_n_trj - self.eval_tasks, self.eval_n_trj)
+        # env_indices = np.repeat(eval_tasks, self.eval_episodes)
+        # for env_idx, task_idx in enumerate(env_indices):
+        #     vec_env.envs[env_idx].reset_task(task_idx)
+
+        # rewards = vec_rollout(
+        #     vec_env=vec_env,
+        #     model=model,
+        #     discretizer=discretizer,
+        #     beam_context_size=self.eval_beam_context,
+        #     beam_width=self.eval_beam_width,
+        #     beam_steps=self.eval_beam_steps,
+        #     plan_every=self.eval_plan_every,
+        #     sample_expand=self.eval_sample_expand,
+        #     k_act=self.eval_k_act,
+        #     k_obs=self.eval_k_obs,
+        #     k_reward=self.eval_k_reward,
+        #     temperature=self.eval_temperature,
+        #     discount=self.eval_discount,
+        #     max_steps=vec_env.envs[0].max_episode_steps,
+        #     device=self.device
+        # )
+        # scores = [vec_env.envs[0].get_normalized_score(r) for r in rewards]
+
+        return final_returns_mean, final_returns_std, reward_mean, reward_std
 
 
     def train(self, model, dataloader, num_epochs=1, log_every=100):
@@ -241,17 +275,24 @@ class GPTTrainer:
                 discretizer.to(self.device)
 
                 if env_name == "walker-rand-params":
-                    reward_mean, reward_std, score_mean, score_std = self.meta_eval(env_name, model, discretizer, seed=self.eval_seed)
+                    final_reward_mean, final_reward_std, online_reward_mean, online_reward_std = self.meta_eval(env_name, model, discretizer, seed=self.eval_seed)
+                    wandb.log({
+                        "eval/reward_mean": final_reward_mean,
+                        "eval/reward_std": final_reward_std,
+                        "eval/online_reward_mean": online_reward_mean,
+                        "eval/online_reward_std": online_reward_std
+                    })
+                    print(f"   AverageReturn_all_test_tasks EVAL {epoch}: {final_reward_mean} ± {final_reward_std}")
+                    print(f"   AverageReturn_online_test_tasks EVAL {epoch}: {online_reward_mean} ± {online_reward_std}")
                 else:
                     reward_mean, reward_std, score_mean, score_std = self.eval(env_name, model, discretizer, seed=self.eval_seed)
-
-                wandb.log({
-                    "eval/reward_mean": reward_mean,
-                    "eval/reward_std": reward_std,
-                    "eval/score_mean": score_mean,
-                    "eval/score_std": score_std,
-                })
-                print(f"   EVAL {epoch}:", reward_mean, reward_std)
+                    wandb.log({
+                        "eval/reward_mean": reward_mean,
+                        "eval/reward_std": reward_std,
+                        "eval/score_mean": score_mean,
+                        "eval/score_std": score_std,
+                    })
+                    print(f"   EVAL {epoch}:", reward_mean, reward_std)
 
             if self.checkpoints_path is not None and epoch % self.save_every == 0:
                 path = os.path.join(self.checkpoints_path, f"model_{epoch}.pt")

@@ -113,11 +113,12 @@ class WalkerRandParamsWrappedEnv(Walker2DRandParamsEnv):
         #     done = True
         return obs, reward, done, info
 
-    def reset_task(self, idx):
+    def reset_task(self, idx, verbose=False):
+        print(f"reset environment with task idx {idx}")
         self._goal_idx = idx
         self._task = self.tasks[idx]
         self._goal = idx
-        self.set_task(self._task)
+        self.set_task(self._task, verbose=verbose)
         self.reset()
 
     def get_normalized_score(self, reward):

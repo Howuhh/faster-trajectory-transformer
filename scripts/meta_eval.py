@@ -62,8 +62,10 @@ def run_experiment(config, seed, device):
 
         env = create_meta_env(data_dir=run_config.dataset.data_dir, n_tasks=run_config.dataset.n_trj)
         for i in tqdm(eval_tasks, desc="Evaluation (not vectorized)"):
-            env.reset_task(i)
-            for j in trange(config.num_episodes, desc=f"Evaluation on task {i}"):
+            print(f"task idx: {i}")
+            task_rewards = []
+            env.reset_task(i, verbose=True)
+            for _ in trange(config.num_episodes, desc=f"Evaluation on task {i}"):
                 reward = rollout(
                     env=env,
                     model=model,
@@ -83,6 +85,9 @@ def run_experiment(config, seed, device):
                     device=device
                 )
                 rewards.append(reward)
+                task_rewards.append(reward)
+            print(f"AvgReturn on task {i}: {np.mean(task_rewards)} ± {np.std(task_rewards)}")
+            
 
     # make sync with MerPO
     # In MerPO, there's more complicated logics (guarantee num_steps_per_eval (600)), but I removed it.

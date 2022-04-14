@@ -46,7 +46,8 @@ def rollout(
         device="cpu"
     ):
     assert plan_every <= beam_steps, "too short planning horizon"
-    os.makedirs(render_path, exist_ok=True)
+    if render_path is not None:
+        os.makedirs(render_path, exist_ok=True)
 
     transition_dim, obs_dim, act_dim = model.transition_dim, model.observation_dim, model.action_dim
     # trajectory of tokens for model action planning

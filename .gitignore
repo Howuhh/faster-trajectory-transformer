@@ -156,5 +156,10 @@ Thumbs.db
 
 # un file
 *.un~
+render/
+checkpoints/
+wandb/
+d4rl_render/
+trained/
 
 # End of https://www.toptal.com/developers/gitignore/api/pythono
