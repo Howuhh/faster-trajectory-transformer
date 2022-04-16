@@ -11,10 +11,9 @@ from trajectory.planning.beam import beam_plan, batch_beam_plan
 from .envs.walker_rand_params_wrapper import WalkerRandParamsWrappedEnv
 
 
-def create_meta_env(data_dir, n_tasks):
-    env = WalkerRandParamsWrappedEnv(data_dir=data_dir, n_tasks=n_tasks, randomize_tasks=False)
+def create_meta_env(data_dir, n_tasks, max_episode_steps=600):
+    env = WalkerRandParamsWrappedEnv(data_dir=data_dir, n_tasks=n_tasks, randomize_tasks=False, max_episode_steps=max_episode_steps)
     env.name = "walker-rand-params"
-    env.max_episode_steps = 1000
     return env
 
 def create_env(name):

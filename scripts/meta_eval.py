@@ -26,7 +26,7 @@ def create_argparser():
     return parser
 
 
-def finetune_model(model, task_idx, config, device, seed=42, finetune_ratio=0.1, num_epochs=10):
+def finetune_model(model, task_idx, config, device, seed=42, finetune_ratio=0.1, num_epochs=10, finetune_lr=6e-5):
     finetune_path = os.path.join(config.trainer.checkpoints_path, "finetune", str(task_idx))
     if os.path.exists(finetune_path):
         model.load_state_dict(torch.load(os.path.join(finetune_path, "model_last.pt"), map_location=device))
@@ -59,8 +59,6 @@ def finetune_model(model, task_idx, config, device, seed=42, finetune_ratio=0.1,
             **config.wandb,
             config=dict(OmegaConf.to_container(config, resolve=True))
         )
-        model = GPT(**config.model)
-        model.to(device)
 
         warmup_tokens = len(dataset) * data_conf.seq_len * config.model.transition_dim
         final_tokens = warmup_tokens * num_epochs
@@ -71,7 +69,7 @@ def finetune_model(model, task_idx, config, device, seed=42, finetune_ratio=0.1,
             action_weight=trainer_conf.action_weight,
             value_weight=trainer_conf.value_weight,
             reward_weight=trainer_conf.reward_weight,
-            learning_rate=trainer_conf.lr,
+            learning_rate=finetune_lr,
             betas=trainer_conf.betas,
             weight_decay=trainer_conf.weight_decay,
             clip_grad=trainer_conf.clip_grad,
@@ -93,7 +91,7 @@ def finetune_model(model, task_idx, config, device, seed=42, finetune_ratio=0.1,
             eval_n_trj=data_conf.n_trj,
             eval_max_steps=trainer_conf.eval_max_steps,
             checkpoints_path=finetune_path,
-            save_every=num_epochs,
+            save_every=num_epochs+1,
             device=device
         )
         trainer.train(
@@ -102,7 +100,7 @@ def finetune_model(model, task_idx, config, device, seed=42, finetune_ratio=0.1,
             num_epochs=num_epochs,
             log_every = 1e10
         )
-        # finetune with data
+        model.eval()
 
 
 def run_experiment(config, seed, device):
@@ -116,6 +114,7 @@ def run_experiment(config, seed, device):
     model.to(device)
     # model.load_state_dict(torch.load(os.path.join(config.checkpoints_path, config.model_name), map_location=device))
     eval_tasks = range(run_config.dataset.n_trj - run_config.dataset.eval_tasks, run_config.dataset.n_trj)
+    task_stat = {}
 
     if config.vectorized:
         env = DummyVecEnv([lambda: create_meta_env(data_dir=run_config.dataset.data_dir, n_tasks=run_config.dataset.n_trj) for _ in range(run_config.dataset.eval_tasks * config.num_episodes)])
@@ -143,7 +142,7 @@ def run_experiment(config, seed, device):
     else:
         rewards = []
 
-        env = create_meta_env(data_dir=run_config.dataset.data_dir, n_tasks=run_config.dataset.n_trj)
+        env = create_meta_env(data_dir=run_config.dataset.data_dir, n_tasks=run_config.dataset.n_trj, max_episode_steps=config.max_steps)
         for i in tqdm(eval_tasks, desc="Evaluation (not vectorized)"):
             model.load_state_dict(torch.load(os.path.join(config.checkpoints_path, config.model_name), map_location=device))
             print(f"task idx: {i}")
@@ -177,13 +176,12 @@ def run_experiment(config, seed, device):
                     temperature=config.temperature,
                     discount=config.discount,
                     max_steps=config.get("max_steps", None) or env.max_episode_steps,
-                    render_path=os.path.join(config.render_path, str(i)),
+                    render_path=os.path.join(config.render_path, str(i)) if config.get("render_path") else None,
                     device=device
                 )
                 rewards.append(reward)
                 task_rewards.append(reward)
-            print(f"AvgReturn on task {i}: {np.mean(task_rewards)} ± {np.std(task_rewards)}")
-            
+            task_stat[i] = (np.mean(task_rewards), np.std(task_rewards))
 
     # make sync with MerPO
     # In MerPO, there's more complicated logics (guarantee num_steps_per_eval (600)), but I removed it.
@@ -192,6 +190,8 @@ def run_experiment(config, seed, device):
     final_returns_mean, final_returns_std = np.mean(final_returns), np.std(final_returns)
     reward_mean, reward_std = np.mean(rewards), np.std(rewards)
 
+    for task_idx, (mean, std) in task_stat.items():
+        print(f"AvgReturn on task {task_idx}: {mean} ± {std}")
     print(f"Evalution on {run_config.dataset.env_name}")
     print(f"AvgReturn_all_test_tasks: {final_returns_mean} ± {final_returns_std}")
     print(f"AvgReturn_online_test_tasks: {reward_mean} ± {reward_std}")

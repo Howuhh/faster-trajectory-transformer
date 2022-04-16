@@ -179,7 +179,7 @@ class GPTTrainer:
         scores = []
 
         # use unimodal, instead of vec for fair comparsion.
-        env = create_meta_env(data_dir=self.eval_data_dir, n_tasks=self.eval_n_trj)
+        env = create_meta_env(data_dir=self.eval_data_dir, n_tasks=self.eval_n_trj, max_episode_steps=self.eval_max_steps)
         eval_tasks = range(self.eval_n_trj - self.eval_tasks, self.eval_n_trj)
         for i in tqdm(eval_tasks):
             env.reset_task(i)

@@ -18,4 +18,5 @@ vectorized: false
 finetune: true
 finetune_ratio: 0.1
 finetune_epochs: 10
-#render_path: "rollouts"  # WARN: only for not vectorized
+finetune_lr: 0.00006
+render_path: null  # WARN: only for not vectorized
