@@ -73,6 +73,7 @@ class GPT(nn.Module):
         super().__init__()
         # input embedding, vocab_size tokens for each state, action dimension
         self.tok_emb = nn.Embedding(vocab_size * transition_dim, embedding_dim)
+        self.tok_embs = nn.ModuleList([nn.Linear(1, embedding_dim) for _ in range(transition_dim)])
         self.pos_emb = nn.Parameter(torch.zeros(1, seq_len, embedding_dim))
 
         self.drop_emb = nn.Dropout(embedding_dropout)
@@ -86,9 +87,11 @@ class GPT(nn.Module):
         # token's classifier
         if use_sep_heads:
             # see https://github.com/jannerm/trajectory-transformer/issues/3
-            self.head = EinLinear(transition_dim, embedding_dim, vocab_size, bias=False)
+            # self.head = EinLinear(transition_dim, embedding_dim, vocab_size, bias=False)
+            self.head = EinLinear(transition_dim, embedding_dim, 1, bias=False)
         else:
-            self.head = nn.Linear(embedding_dim, vocab_size)
+            # self.head = nn.Linear(embedding_dim, vocab_size)
+            self.head = nn.Linear(embedding_dim, 1)
 
         # constants
         self.vocab_size = vocab_size
@@ -155,9 +158,16 @@ class GPT(nn.Module):
             assert t == 1, f'when using memory input should be 1-time-step tensor, got {t} timesteps.'
 
         # [batch, seq_len]
-        offset_idx = self._offset_tokens(tokens, state=state)
+        # offset_idx = self._offset_tokens(tokens, state=state)
+        offset_idx = tokens
         # [batch, seq_len, embedding_dim]
-        token_embeddings = self.tok_emb(offset_idx)
+        # _offset_idx = torch.zeros_like(offset_idx, device=offset_idx.device).long()
+        # _token_embeddings = self.tok_emb(_offset_idx)
+        if state is None:
+            token_embeddings = torch.cat([self.tok_embs[i % self.transition_dim](offset_idx[:, i].view(-1, 1).float()) for i in range(t)], dim=1).view(b, t, -1)
+        else:
+            state_dim = state[0].shape[1]
+            token_embeddings = self.tok_embs[state_dim % self.transition_dim](offset_idx.float()).view(b, t, -1)
 
         # [1, seq_len, embedding_dim]
         if state is None:
@@ -187,9 +197,11 @@ class GPT(nn.Module):
                 # [batch * (round_to_multiple(seq_len, transition_dim) / transition_dim), transition_dim, vocab_size]
                 logits = self.head(x_pad, model_idx=None)
                 # [batch, round_to_multiple(seq_len, transition_dim), vocab_size]
-                logits = logits.reshape(b, t + n_pad, self.vocab_size)
+                # logits = logits.reshape(b, t + n_pad, self.vocab_size)
+                logits = logits.reshape(b, t + n_pad, 1)
                 # [batch, seq_len, embedding_dim]
                 logits = logits[:, :t, :]
+                # print(f"logits: {logits}")
             else:
                 # select only needed head from heads
                 transition_idx = state[0].shape[1] % self.transition_dim

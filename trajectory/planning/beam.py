@@ -31,21 +31,29 @@ def beam_plan(model, discretizer, context, steps, beam_width, sample_expand, dis
             # [beam_width * sample_expand, cache_len, emb_dim]
             model_state = [s.repeat(sample_expand, 1, 1) for s in model_state]
 
+        print(f"plan: {plan[0]}")
         # sample action tokens
         plan, model_state, _ = sample(
             model, plan, model_state=model_state, steps=model.action_dim, top_k=k_act, temperature=temperature
         )
+        print(f"plan after sample actions: {plan[0]}")
         # sample reward and value estimates
         plan, model_state, logits = sample(
             model, plan, model_state=model_state, steps=2, top_k=k_reward, temperature=temperature
         )
-        probs = F.softmax(logits, dim=-1)
-        reward_and_value = discretizer.expectation(probs, subslice=[model.transition_dim - 2, model.transition_dim])
+        print(f"plan after sample reward: {plan[0]}")
+        #print(f"logit: {logits}")
+        reward_and_value = torch.mean(logits, dim=-1)
+        # probs = F.softmax(logits, dim=-1)
+        # reward_and_value = discretizer.expectation(probs, subslice=[model.transition_dim - 2, model.transition_dim])
 
+        # print(f"reward_and_value: {reward_and_value}")
         rewards[:, t:t + 2] = reward_and_value
 
         values = (rewards * discounts).sum(-1)
         values, idxs = torch.topk(values, k=beam_width)
+        #print(f"value: {values}")
+        #print(f"planned idx: {idxs}")
 
         plan, rewards = plan[idxs], rewards[idxs]
         model_state = [s[idxs] for s in model_state]

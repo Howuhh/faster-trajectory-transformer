@@ -131,7 +131,8 @@ class DiscretizedOfflineDataset(Dataset):
             loss_pad_mask[joined.shape[0]:] = 0
             joined = pad_along_axis(joined, pad_to=self.seq_len, axis=0)
 
-        joined_discrete = self.discretizer.encode(joined).reshape(-1).astype(np.long)
+        # joined_discrete = self.discretizer.encode(joined).reshape(-1).astype(np.long)
+        joined_discrete = joined.reshape(-1)
         loss_pad_mask = loss_pad_mask.reshape(-1)
 
         return joined_discrete[:-1], joined_discrete[1:], loss_pad_mask[:-1]

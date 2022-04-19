@@ -112,7 +112,8 @@ class GPTTrainer:
         tokens, targets, loss_pad_mask = batch
         logits, state = model(tokens)
 
-        loss = F.cross_entropy(logits.reshape(-1, logits.size(-1)), targets.reshape(-1), reduction="none")
+        # loss = F.cross_entropy(logits.reshape(-1, logits.size(-1)), targets.reshape(-1), reduction="none")
+        loss = F.mse_loss(logits.reshape(-1, logits.size(-1)), targets.reshape(-1, 1).float(), reduction="none")
         if self.action_weight != 1 or self.value_weight != 1 or self.reward_weight != 1:
             n_states = int(np.ceil(tokens.shape[1] / model.transition_dim))
             weights = torch.cat([
@@ -122,10 +123,10 @@ class GPTTrainer:
                 torch.ones(1, device=tokens.device) * self.value_weight,
             ])
             weights = weights.repeat(n_states)[1:].repeat(tokens.shape[0], 1)
-            loss = loss * weights.view(-1)
-
-        loss = (loss * loss_pad_mask.view(-1)).mean()
-
+            # loss = loss * weights.view(-1)
+            loss = loss * weights.view(-1, 1)
+        # loss = (loss * loss_pad_mask.view(-1)).mean()
+        loss = (loss * loss_pad_mask.view(-1, 1)).mean()
         return loss
 
     def eval_offline(self, model, dataloader, seed=None, log_every=100):

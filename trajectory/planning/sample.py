@@ -25,7 +25,8 @@ def _sample_inner(logits, top_k, temperature, greedy=False):
 def sample(model, context, steps, top_k=None, model_state=None, temperature=1.0, greedy=False):
     batch_size = context.shape[0]
 
-    raw_logits = torch.zeros(batch_size, steps, model.vocab_size, device=context.device)
+    # raw_logits = torch.zeros(batch_size, steps, model.vocab_size, device=context.device)
+    raw_logits = torch.zeros(batch_size, steps, 1, device=context.device)
 
     if model_state is None:
         logits, model_state = model(context, state=model_state)
@@ -48,8 +49,10 @@ def sample(model, context, steps, top_k=None, model_state=None, temperature=1.0,
             model_state = [s[:, n_crop:] for s in model_state]
 
         logits, model_state = model(context[:, -1:], state=model_state)
+        # print(f"logits: {logits}")
 
-        sampled_tokens = _sample_inner(logits[:, -1, :], top_k, temperature, greedy)
+        # sampled_tokens = _sample_inner(logits[:, -1, :], top_k, temperature, greedy)
+        sampled_tokens = logits[:, -1, :]
         context = torch.hstack([context, sampled_tokens])
 
         raw_logits[:, t] = logits[:, -1, :]

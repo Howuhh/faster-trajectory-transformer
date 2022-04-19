@@ -54,7 +54,8 @@ def rollout(
     context = torch.zeros(1, model.transition_dim * (max_steps + 1), dtype=torch.long).to(device)
 
     obs = env.reset()
-    obs_tokens = discretizer.encode(obs, subslice=(0, obs_dim)).squeeze()
+    # obs_tokens = discretizer.encode(obs, subslice=(0, obs_dim)).squeeze()
+    obs_tokens = obs.squeeze()
 
     context[:, :model.observation_dim] = torch.as_tensor(obs_tokens, device=device)  # initial tokens for planning
 
@@ -79,7 +80,8 @@ def rollout(
             prediction_tokens = prediction_tokens[transition_dim:]
 
         action_tokens = prediction_tokens[:act_dim]
-        action = discretizer.decode(action_tokens.cpu().numpy(), subslice=(obs_dim, obs_dim + act_dim)).squeeze()
+        # action = discretizer.decode(action_tokens.cpu().numpy(), subslice=(obs_dim, obs_dim + act_dim)).squeeze()
+        action = action_tokens.cpu().numpy()
 
         obs, reward, done, _ = env.step(action)
 
@@ -88,11 +90,13 @@ def rollout(
         if done:
             break
 
-        obs_tokens = discretizer.encode(obs, subslice=(0, obs_dim)).squeeze()
-        reward_tokens = discretizer.encode(
-            np.array([reward, value_placeholder]),
-            subslice=(transition_dim - 2, transition_dim)
-        )
+        # obs_tokens = discretizer.encode(obs, subslice=(0, obs_dim)).squeeze()
+        obs_tokens = obs.squeeze()
+        # reward_tokens = discretizer.encode(
+        #     np.array([reward, value_placeholder]),
+        #     subslice=(transition_dim - 2, transition_dim)
+        # )
+        reward_tokens = [reward, value_placeholder]
 
         # updating context with new action and obs
         context_offset = model.transition_dim * step
@@ -140,8 +144,8 @@ def vec_rollout(
     context = torch.zeros(vec_env.num_envs, transition_dim * (max_steps + 1), dtype=torch.long, device=device)
 
     obs = vec_env.reset()
-    obs_tokens = discretizer.encode(obs, subslice=(0, obs_dim))
-
+    # obs_tokens = discretizer.encode(obs, subslice=(0, obs_dim))
+    obs_tokens = obs
     context[:, :obs_dim] = torch.as_tensor(obs_tokens, device=device)  # initial tokens for planning
 
     total_rewards = np.zeros(vec_env.num_envs)
@@ -165,15 +169,18 @@ def vec_rollout(
             plan_buffer = plan_buffer[:, transition_dim:]
 
         action_tokens = plan_buffer[:, :act_dim]
-        action = discretizer.decode(action_tokens.cpu().numpy(), subslice=(obs_dim, obs_dim + act_dim))
+        # action = discretizer.decode(action_tokens.cpu().numpy(), subslice=(obs_dim, obs_dim + act_dim))
+        action = action_tokens.cpu().numpy()
 
         obs, reward, done, _ = vec_env.step(action)
 
-        obs_tokens = discretizer.encode(obs[~dones], subslice=(0, obs_dim))
-        reward_tokens = discretizer.encode(
-            np.hstack([reward.reshape(-1, 1), value_placeholder]),
-            subslice=(transition_dim - 2, transition_dim)
-        )
+        # obs_tokens = discretizer.encode(obs[~dones], subslice=(0, obs_dim))
+        obs_tokens = obs[~dones]
+        # reward_tokens = discretizer.encode(
+        #     np.hstack([reward.reshape(-1, 1), value_placeholder]),
+        #     subslice=(transition_dim - 2, transition_dim)
+        # )
+        reward_tokens = np.hstack([reward.reshape(-1, 1), value_placeholder])
         # updating context with new obs, action and reward
         context_offset = model.transition_dim * step
         # [s, ...] -> [s, a, ...]
