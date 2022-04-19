@@ -29,7 +29,7 @@ def create_argparser():
 def finetune_model(model, task_idx, config, device, seed=42, finetune_ratio=0.1, num_epochs=10, finetune_lr=6e-5):
     finetune_path = os.path.join(config.trainer.checkpoints_path, "finetune", str(task_idx))
     if os.path.exists(finetune_path):
-        model.load_state_dict(torch.load(os.path.join(finetune_path, "model_last.pt"), map_location=device))
+        model.load_state_dict(torch.load(os.path.join(finetune_path, config.model_name), map_location=device))
     else:
         # finetune the trained model for target dataset.
         set_seed(seed=seed)
