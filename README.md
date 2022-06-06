@@ -46,7 +46,7 @@ python scripts/train.py --config="configs/medium/halfcheetah_medium" --device="c
 
 ## Evaluation
 
-Available evaluation parameters can be seen in validation [config](configs/eval_vase.yaml).
+Available evaluation parameters can be seen in validation [config](configs/eval_base.yaml).
 Here parameters are set to match evaluation configs from original implementation by [@jannerm](https://github.com/jannerm/trajectory-transformer). 
 
 ```bash
