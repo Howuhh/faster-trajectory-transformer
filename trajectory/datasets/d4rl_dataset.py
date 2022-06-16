@@ -41,10 +41,10 @@ def segment(states, actions, rewards, terminals):
                 "actions": [],
                 "rewards": []
             }
-        else:
-            trajectories[episode_num]["states"].append(states[t])
-            trajectories[episode_num]["actions"].append(actions[t])
-            trajectories[episode_num]["rewards"].append(rewards[t])
+        
+        trajectories[episode_num]["states"].append(states[t])
+        trajectories[episode_num]["actions"].append(actions[t])
+        trajectories[episode_num]["rewards"].append(rewards[t])
 
         if terminals[t].item():
             # next episode
