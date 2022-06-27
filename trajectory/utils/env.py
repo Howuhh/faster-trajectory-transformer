@@ -104,7 +104,7 @@ def rollout(
 
     return total_reward
 
-
+@torch.no_grad()
 def vec_rollout(
         vec_env,
         model,
