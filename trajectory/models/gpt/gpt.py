@@ -29,18 +29,18 @@ class TransformerBlock(nn.Module):
 
     def forward(self, x, state=None, attn_pad_mask=None):
         # state is a previous input to this layer
-        x = self.norm1(x)
+        x_norm = self.norm1(x)
 
         if state is None:
             # if context_len < seq_len
             attn_mask = self.attn_mask[:x.shape[1], :x.shape[1]]
-            q, k, v = x, x, x
+            q, k, v = x_norm, x_norm, x_norm
         else:
             assert x.size(1) == 1, f'when using memory input should be 1-time-step tensor, got {x.size(1)} timesteps.'
             assert state.shape[1] + 1 <= self.seq_len, f"{state.shape[1] + 1}"
 
             attn_mask = None
-            q, k, v = x, torch.cat([state, x], dim=1), torch.cat([state, x], dim=1)
+            q, k, v = x_norm, torch.cat([state, x_norm], dim=1), torch.cat([state, x_norm], dim=1)
 
         new_state = k
         x = x + self.drop(self.attention(q, k, v, attn_mask=attn_mask, key_padding_mask=attn_pad_mask, need_weights=False)[0])
