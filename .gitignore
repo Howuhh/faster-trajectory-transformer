@@ -3,3 +3,5 @@ run.sh
 **/__pycache__
 data
 rollouts
+wandb
+checkpoints
