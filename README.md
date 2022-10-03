@@ -4,8 +4,6 @@
 ![video](media/walker2d.gif)
 ![video](media/hopper.gif)
 
-**WARN**: Pay attention to the [issue](https://github.com/Howuhh/faster-trajectory-transformer/issues/3#issue-1286177514) with the bug, which is not fixed yet. It will be fixed eventually tho.
-
 This is reimplementation of Trajectory Transformer, introduced in **Offline Reinforcement Learning 
 as One Big Sequence Modeling Problem** [paper](https://arxiv.org/abs/2106.02039). 
 
@@ -86,5 +84,15 @@ python scripts/eval.py \
   author = {Michael Janner and Qiyang Li and Sergey Levine},
   booktitle = {Advances in Neural Information Processing Systems},
   year = {2021},
+}
+```
+
+Please, if you use this code in your research, cite it:
+```
+@misc{fastertt2022,
+  title={Faster Trajectory Transformer},
+  author={Alexander Nikulin},
+  year={2022},
+  url={https://github.com/Howuhh/faster-trajectory-transformer},
 }
 ```
