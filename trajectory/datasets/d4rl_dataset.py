@@ -22,7 +22,8 @@ def join_trajectory(states, actions, rewards, discount=0.99):
     for t in range(traj_length):
         # discounted return-to-go from state s_t:
         # r_{t+1} + y * r_{t+2} + y^2 * r_{t+3} + ...
-        values[t] = (rewards[t + 1:] * discounts[:-t - 1]).sum()
+        # .T as rewards of shape [len, 1], see https://github.com/Howuhh/faster-trajectory-transformer/issues/9
+        values[t] = (rewards[t + 1:].T * discounts[:-t - 1]).sum()
 
     joined_transition = np.concatenate([states, actions, rewards, values], axis=-1)
 
