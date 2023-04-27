@@ -1,9 +1,9 @@
 wandb:
-  project: faster_trajectory_transformer
+  project: null
   name: halfcheetah_medium
   group: gpt_cache
-  entity: Howuhh
-  mode: offline
+  entity: null
+  mode: disabled
 dataset:
   env_name: halfcheetah-medium-v2
   seq_len: 10
